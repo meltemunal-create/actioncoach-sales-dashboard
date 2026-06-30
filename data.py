@@ -116,7 +116,7 @@ def process_data(raw: pd.DataFrame) -> pd.DataFrame:
     df = raw.copy()
     df.columns = [str(c).strip() for c in df.columns]
 
-    required_cols = {"Sales Date", "Name", "Product", "Sales", "Cashbank", "Months"}
+    required_cols = {"Sales Date", "Name", "Product", "Sales", "Cashbank"}
     missing = required_cols - set(df.columns)
     if missing:
         raise ValueError(f"Sheet is missing expected columns: {missing}")
@@ -127,7 +127,12 @@ def process_data(raw: pd.DataFrame) -> pd.DataFrame:
     df["Sales"] = pd.to_numeric(df["Sales"], errors="coerce")
     df["Cashbank"] = pd.to_numeric(df["Cashbank"], errors="coerce")
     df["Sales Date"] = pd.to_datetime(df["Sales Date"], errors="coerce")
-    df["Months"] = df["Months"].astype(str).str.strip()
+
+    # Derive the month name directly from the Sales Date column rather than
+    # trusting a separate "Months" column in the sheet, which may be absent,
+    # blank, or written in a different language. This is the single source
+    # of truth for which month a row belongs to.
+    df["Months"] = df["Sales Date"].dt.month_name()
 
     df = df.dropna(subset=["Name_raw"])
     df = df[df["Name_raw"] != "nan"]
