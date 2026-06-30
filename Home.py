@@ -29,3 +29,33 @@ st.info(
     "**Monthly** — pick any month, see the product summary table for that "
     "month."
 )
+
+# ---------------------------------------------------------------------------
+# TEMPORARY DEBUG SECTION -- remove once the data pipeline is confirmed
+# working. Shows exactly what comes back from the sheet fetch, at every
+# stage, so we can see where it goes wrong.
+# ---------------------------------------------------------------------------
+st.divider()
+st.subheader("🔧 Debug: data pipeline")
+
+import data as _data
+
+if st.button("Run debug fetch"):
+    try:
+        raw = _data.fetch_raw_sheet()
+        st.write("**Step 1 — fetch_raw_sheet() result:**")
+        st.write(f"Shape: {raw.shape}")
+        st.write(f"Columns: {raw.columns.tolist()}")
+        st.dataframe(raw.head(5))
+    except Exception as e:
+        st.error(f"fetch_raw_sheet() FAILED: {type(e).__name__}: {e}")
+        st.stop()
+
+    try:
+        processed = _data.process_data(raw)
+        st.write("**Step 2 — process_data() result:**")
+        st.write(f"Shape: {processed.shape}")
+        st.write(f"Months found: {sorted(processed['Months'].dropna().unique().tolist())}")
+        st.dataframe(processed[["Name_raw", "Product", "Sales", "Cashbank", "Months"]].head(10))
+    except Exception as e:
+        st.error(f"process_data() FAILED: {type(e).__name__}: {e}")
