@@ -29,6 +29,14 @@ except Exception as e:
     st.stop()
 
 available_months = months_in_data(df)
+
+with st.expander("🔧 Debug info (temporary)"):
+    st.write(f"df shape: {df.shape}")
+    st.write(f"df['Months'].unique(): {sorted(df['Months'].dropna().unique().tolist())}")
+    st.write(f"available_months: {available_months}")
+    st.write(f"counts_as_sale sum: {df['counts_as_sale'].sum()}")
+    st.write(f"counts_as_cashbank sum: {df['counts_as_cashbank'].sum()}")
+
 if not available_months:
     st.warning("No data found in the sheet yet.")
     st.stop()
