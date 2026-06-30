@@ -108,30 +108,26 @@ def _booster_units(product: str) -> int:
 
 
 def _clean_currency(series: pd.Series) -> pd.Series:
-    """Coerce a column that may contain currency-formatted strings (e.g.
-    '750€', '1.100€', '1.100,50€') into clean floats. The Google Sheets CSV
-    export can preserve a cell's DISPLAY formatting rather than its raw
-    numeric value, so a plain pd.to_numeric() call alone is not reliable
-    for euro-formatted cells. We only apply European number-format
-    conversion ('.' = thousands, ',' = decimal) to values that actually
-    contain a currency symbol or a comma -- plain numeric strings (e.g.
-    '60.5' from a non-currency-formatted cell) are left as standard
-    decimal-point numbers so we don't misinterpret '60.5' as '605'."""
+    """Coerce a column that may contain currency-formatted strings into
+    clean floats. The Google Sheets CSV export (gviz/tq) uses standard
+    English/US number formatting: ',' is the thousands separator and '.' is
+    the decimal separator (e.g. '1,100.50€', '750.00'). We strip the
+    currency symbol and thousands-separator commas, leaving the decimal
+    point untouched, then parse as a standard float."""
     if series.dtype.kind in "if":
         # Already numeric (e.g. when reading from an .xlsx file directly).
         return pd.to_numeric(series, errors="coerce")
 
-    s = series.astype(str).str.strip()
-    has_currency_marker = s.str.contains("€", regex=False) | s.str.contains(",", regex=False)
-
-    cleaned = s.str.replace("€", "", regex=False).str.replace("\u20ac", "", regex=False)
-    cleaned = cleaned.str.replace(" ", "", regex=False).str.strip()
-
-    european = cleaned.str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
-
-    final = cleaned.where(~has_currency_marker, european)
-    final = final.replace({"": None, "nan": None, "None": None})
-    return pd.to_numeric(final, errors="coerce")
+    cleaned = (
+        series.astype(str)
+        .str.replace("€", "", regex=False)
+        .str.replace("\u20ac", "", regex=False)
+        .str.replace(",", "", regex=False)  # thousands separator
+        .str.replace(" ", "", regex=False)
+        .str.strip()
+    )
+    cleaned = cleaned.replace({"": None, "nan": None, "None": None})
+    return pd.to_numeric(cleaned, errors="coerce")
 
 
 def process_data(raw: pd.DataFrame) -> pd.DataFrame:
