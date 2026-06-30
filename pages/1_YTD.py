@@ -118,7 +118,7 @@ values, target_grid = build_matrix(metric)
 
 values_display = values.copy()
 values_display.insert(0, "Total", values.sum(axis=1))
-fmt_values = values_display.map(lambda v: f"{v:,.0f}")
+fmt_values = values_display.map(lambda v: f"{float(v):,.0f}")
 fmt_values = fmt_values.reset_index().rename(columns={"display_product": "Product"})
 
 
