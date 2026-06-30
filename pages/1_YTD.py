@@ -62,9 +62,17 @@ sub = df[df["Months"].isin(available_months)]
 
 
 def _pct_color_cell(value, target) -> str:
-    if target is None or target == 0 or pd.isna(target):
+    try:
+        target_f = float(target)
+    except (TypeError, ValueError):
         return "color: #999;"
-    pct = value / target * 100
+    if pd.isna(target_f) or target_f == 0:
+        return "color: #999;"
+    try:
+        value_f = float(value)
+    except (TypeError, ValueError):
+        return "color: #999;"
+    pct = value_f / target_f * 100
     if pct >= 100:
         return "background-color: #EAF3DE; color: #27500A; font-weight: 600;"
     if pct >= 50:
@@ -116,9 +124,19 @@ def build_matrix(metric_name: str) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 values, target_grid = build_matrix(metric)
 
+def _fmt_matrix_num(v) -> str:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return "--"
+    if pd.isna(f):
+        return "--"
+    return f"{f:,.0f}"
+
+
 values_display = values.copy()
 values_display.insert(0, "Total", values.sum(axis=1))
-fmt_values = values_display.map(lambda v: f"{float(v):,.0f}")
+fmt_values = values_display.map(_fmt_matrix_num)
 fmt_values = fmt_values.reset_index().rename(columns={"display_product": "Product"})
 
 
