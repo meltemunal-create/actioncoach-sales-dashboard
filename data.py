@@ -107,6 +107,33 @@ def _booster_units(product: str) -> int:
     return 1
 
 
+def _clean_currency(series: pd.Series) -> pd.Series:
+    """Coerce a column that may contain currency-formatted strings (e.g.
+    '750€', '1.100€', '1.100,50€') into clean floats. The Google Sheets CSV
+    export can preserve a cell's DISPLAY formatting rather than its raw
+    numeric value, so a plain pd.to_numeric() call alone is not reliable
+    for euro-formatted cells. We only apply European number-format
+    conversion ('.' = thousands, ',' = decimal) to values that actually
+    contain a currency symbol or a comma -- plain numeric strings (e.g.
+    '60.5' from a non-currency-formatted cell) are left as standard
+    decimal-point numbers so we don't misinterpret '60.5' as '605'."""
+    if series.dtype.kind in "if":
+        # Already numeric (e.g. when reading from an .xlsx file directly).
+        return pd.to_numeric(series, errors="coerce")
+
+    s = series.astype(str).str.strip()
+    has_currency_marker = s.str.contains("€", regex=False) | s.str.contains(",", regex=False)
+
+    cleaned = s.str.replace("€", "", regex=False).str.replace("\u20ac", "", regex=False)
+    cleaned = cleaned.str.replace(" ", "", regex=False).str.strip()
+
+    european = cleaned.str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
+
+    final = cleaned.where(~has_currency_marker, european)
+    final = final.replace({"": None, "nan": None, "None": None})
+    return pd.to_numeric(final, errors="coerce")
+
+
 def process_data(raw: pd.DataFrame) -> pd.DataFrame:
     """Clean the raw sheet and flag duplicate Sales rows according to the
     business rule described in the module docstring. Returns a row-level
@@ -124,8 +151,8 @@ def process_data(raw: pd.DataFrame) -> pd.DataFrame:
     df["Product"] = df["Product"].astype(str).str.strip()
     df["Name_raw"] = df["Name"].astype(str).str.strip()
     df["Name_norm"] = df["Name_raw"].apply(_normalize_name)
-    df["Sales"] = pd.to_numeric(df["Sales"], errors="coerce")
-    df["Cashbank"] = pd.to_numeric(df["Cashbank"], errors="coerce")
+    df["Sales"] = _clean_currency(df["Sales"])
+    df["Cashbank"] = _clean_currency(df["Cashbank"])
     df["Sales Date"] = pd.to_datetime(df["Sales Date"], errors="coerce")
 
     # Derive the month name directly from the Sales Date column rather than
