@@ -57,14 +57,14 @@ def render_product_table(table: pd.DataFrame, grand_total: dict) -> None:
 
     fmt = full.copy()
     for col in ["Sales EUR", "Cashbank EUR", "Previous Period Cashbank", "Pending Collection EUR"]:
-        fmt[col] = fmt[col].map(lambda v: f"{v:,.0f}")
-    fmt["Units"] = fmt["Units"].map(lambda v: f"{v:,.0f}")
-    fmt["Cashbank Count"] = fmt["Cashbank Count"].map(lambda v: f"{v:,.0f}")
+        fmt[col] = fmt[col].map(lambda v: f"{float(v):,.0f}")
+    fmt["Units"] = fmt["Units"].map(lambda v: f"{float(v):,.0f}")
+    fmt["Cashbank Count"] = fmt["Cashbank Count"].map(lambda v: f"{float(v):,.0f}")
     fmt["Sales Target"] = fmt["Sales Target"].map(
-        lambda v: "--" if pd.isna(v) else f"{v:,.0f}"
+        lambda v: "--" if pd.isna(v) else f"{float(v):,.0f}"
     )
     fmt["Target Actual %"] = full["Target Actual %"].map(
-        lambda v: "--" if v is None or pd.isna(v) else f"{v:.0f}%"
+        lambda v: "--" if v is None or pd.isna(v) else f"{float(v):.0f}%"
     )
 
     rename = {
@@ -98,8 +98,8 @@ def render_sb_detail_table(sb_table: pd.DataFrame) -> None:
         st.caption("No Saturday Booster sales in this period.")
         return
     fmt = sb_table.copy()
-    fmt["Units"] = fmt["Units"].map(lambda v: f"{v:,.0f}")
-    fmt["Sales EUR"] = fmt["Sales EUR"].map(lambda v: f"{v:,.0f}")
-    fmt["Cashbank EUR"] = fmt["Cashbank EUR"].map(lambda v: f"{v:,.0f}")
+    fmt["Units"] = fmt["Units"].map(lambda v: f"{float(v):,.0f}")
+    fmt["Sales EUR"] = fmt["Sales EUR"].map(lambda v: f"{float(v):,.0f}")
+    fmt["Cashbank EUR"] = fmt["Cashbank EUR"].map(lambda v: f"{float(v):,.0f}")
     fmt = fmt.rename(columns={"Sales EUR": "Sales (€)", "Cashbank EUR": "Cashbank (€)"})
     st.dataframe(fmt, use_container_width=True, hide_index=True)
