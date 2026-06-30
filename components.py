@@ -39,12 +39,41 @@ def render_kpi_row(kpis: dict) -> None:
             st.metric("Revenue target (€)", "--")
 
 
+def _fmt_num(v, decimals: int = 0) -> str:
+    """Format a number for display, treating ANY value that can't be
+    converted to float (NaN, None, pd.NA, NaT, Arrow nulls, ...) as missing.
+    This is deliberately defensive: pd.isna() alone has been seen to miss
+    some Arrow-backed null representations when iterating via .map(), so we
+    fall back to a try/except as the real source of truth."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return "--"
+    if pd.isna(f):
+        return "--"
+    return f"{f:,.{decimals}f}"
+
+
+def _fmt_pct(v) -> str:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return "--"
+    if pd.isna(f):
+        return "--"
+    return f"{f:.0f}%"
+
+
 def _pct_color(pct) -> str:
-    if pct is None or pd.isna(pct):
+    try:
+        f = float(pct)
+    except (TypeError, ValueError):
         return "background-color: transparent; color: inherit;"
-    if pct >= 100:
+    if pd.isna(f):
+        return "background-color: transparent; color: inherit;"
+    if f >= 100:
         return "background-color: #EAF3DE; color: #27500A; font-weight: 600;"
-    if pct >= 50:
+    if f >= 50:
         return "background-color: #FAEEDA; color: #633806; font-weight: 600;"
     return "background-color: #FCEBEB; color: #791F1F; font-weight: 600;"
 
@@ -57,15 +86,11 @@ def render_product_table(table: pd.DataFrame, grand_total: dict) -> None:
 
     fmt = full.copy()
     for col in ["Sales EUR", "Cashbank EUR", "Previous Period Cashbank", "Pending Collection EUR"]:
-        fmt[col] = fmt[col].map(lambda v: f"{float(v):,.0f}")
-    fmt["Units"] = fmt["Units"].map(lambda v: f"{float(v):,.0f}")
-    fmt["Cashbank Count"] = fmt["Cashbank Count"].map(lambda v: f"{float(v):,.0f}")
-    fmt["Sales Target"] = fmt["Sales Target"].map(
-        lambda v: "--" if pd.isna(v) else f"{float(v):,.0f}"
-    )
-    fmt["Target Actual %"] = full["Target Actual %"].map(
-        lambda v: "--" if v is None or pd.isna(v) else f"{float(v):.0f}%"
-    )
+        fmt[col] = fmt[col].map(_fmt_num)
+    fmt["Units"] = fmt["Units"].map(_fmt_num)
+    fmt["Cashbank Count"] = fmt["Cashbank Count"].map(_fmt_num)
+    fmt["Sales Target"] = fmt["Sales Target"].map(_fmt_num)
+    fmt["Target Actual %"] = full["Target Actual %"].map(_fmt_pct)
 
     rename = {
         "Units": "# of Products",
@@ -98,8 +123,8 @@ def render_sb_detail_table(sb_table: pd.DataFrame) -> None:
         st.caption("No Saturday Booster sales in this period.")
         return
     fmt = sb_table.copy()
-    fmt["Units"] = fmt["Units"].map(lambda v: f"{float(v):,.0f}")
-    fmt["Sales EUR"] = fmt["Sales EUR"].map(lambda v: f"{float(v):,.0f}")
-    fmt["Cashbank EUR"] = fmt["Cashbank EUR"].map(lambda v: f"{float(v):,.0f}")
+    fmt["Units"] = fmt["Units"].map(_fmt_num)
+    fmt["Sales EUR"] = fmt["Sales EUR"].map(_fmt_num)
+    fmt["Cashbank EUR"] = fmt["Cashbank EUR"].map(_fmt_num)
     fmt = fmt.rename(columns={"Sales EUR": "Sales (€)", "Cashbank EUR": "Cashbank (€)"})
     st.dataframe(fmt, use_container_width=True, hide_index=True)
